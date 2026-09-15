@@ -9,6 +9,23 @@ import { View } from './render.js';
 import { Tap } from './tele.js';
 
 const $ = (id) => document.getElementById(id);
+
+// iOS overlays its toolbars on top of a position:fixed inset:0 box, so anything
+// anchored to the bottom - the thumbsticks especially - lands underneath the tab
+// bar and is simply not there for the player. Drive the HUD box from
+// visualViewport, which reports the area actually visible.
+(function fitViewport() {
+  const vv = window.visualViewport;
+  const root = document.documentElement;
+  const sync = () => {
+    root.style.setProperty('--vvh', (vv ? vv.height : innerHeight) + 'px');
+    root.style.setProperty('--vvtop', (vv ? vv.offsetTop : 0) + 'px');
+  };
+  sync();
+  if (vv) { vv.addEventListener('resize', sync); vv.addEventListener('scroll', sync); }
+  addEventListener('resize', sync);
+  addEventListener('orientationchange', () => setTimeout(sync, 250));
+})();
 const cv = /** @type {HTMLCanvasElement} */ ($('cv'));
 const view = new View(cv);
 const input = new Input($('stage'));

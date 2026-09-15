@@ -17,12 +17,13 @@ html,body{height:100%;overflow:hidden;background:var(--void);color:var(--ink);
   font:14px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;
   -webkit-font-smoothing:antialiased;overscroll-behavior:none;
   -webkit-tap-highlight-color:transparent}
+:root{--vvh:100%;--vvtop:0px}
 #stage{position:fixed;inset:0;touch-action:none}
 #cv{display:block;width:100%;height:100%}
 
 /* ---------- hud ---------- */
-#hud{position:fixed;inset:0;pointer-events:none;
-  padding:calc(env(safe-area-inset-top) + 10px) 12px 12px}
+#hud{position:fixed;left:0;right:0;top:var(--vvtop);height:var(--vvh);
+  pointer-events:none;padding:calc(env(safe-area-inset-top) + 10px) 12px 12px}
 .top{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}
 .pill{background:rgba(11,14,19,.82);border:1px solid var(--rule);border-radius:3px;
   padding:5px 9px;font-size:11px;letter-spacing:.03em;display:flex;gap:7px;align-items:center}
@@ -91,20 +92,20 @@ pre{background:var(--void);border:1px solid var(--rule);border-radius:3px;paddin
 /* Floating sticks. Drawn faint at a resting position so a first-time player
    can see the controls exist, then they jump to wherever the thumb lands. */
 .stick{position:absolute;width:96px;height:96px;pointer-events:none;
-  bottom:calc(env(safe-area-inset-bottom) + 58px);
+  bottom:calc(env(safe-area-inset-bottom) + 34px);
   display:flex;align-items:center;justify-content:center;
-  opacity:.4;transition:opacity .12s ease}
+  opacity:.72;transition:opacity .12s ease}
 .stick.on{opacity:1;transition:none}
 #stickL{left:18px}
 #stickR{right:142px}
 .stick .ring{position:absolute;inset:0;border-radius:50%;
-  border:2px solid var(--ink3);background:rgba(11,14,19,.35)}
+  border:2px solid var(--ink2);background:rgba(11,14,19,.55)}
 .stick.on .ring{border-color:var(--accent)}
 .stick .knob{position:absolute;width:40px;height:40px;border-radius:50%;
-  background:rgba(163,173,186,.5);border:2px solid var(--ink2);
+  background:rgba(163,173,186,.72);border:2px solid var(--ink);
   transform:translate(0,0)}
 .stick.on .knob{background:rgba(242,141,85,.55);border-color:var(--accent)}
-.stick .cap{position:absolute;bottom:-15px;font-size:9px;letter-spacing:.14em;
+.stick .cap{position:absolute;top:-16px;font-size:9px;letter-spacing:.14em;
   color:var(--ink3);font-weight:600}
 .stick.on .cap{color:var(--accent)}
 @media(hover:hover) and (pointer:fine){.stick{display:none}}
@@ -116,7 +117,7 @@ pre{background:var(--void);border:1px solid var(--rule);border-radius:3px;paddin
 }
 
 /* one control for floors: tap it, the whole change happens */
-#fbtn{position:absolute;right:16px;bottom:calc(env(safe-area-inset-bottom) + 73px);
+#fbtn{position:absolute;right:16px;bottom:calc(env(safe-area-inset-bottom) + 49px);
   pointer-events:auto;width:66px;height:66px;border-radius:50%;padding:0;
   background:rgba(111,179,207,.16);border:2px solid var(--cool);color:var(--cool);
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
@@ -125,7 +126,7 @@ pre{background:var(--void);border:1px solid var(--rule);border-radius:3px;paddin
 @media(hover:hover) and (pointer:fine){#fbtn{display:none}}
 @media(max-width:360px){#fbtn{width:58px;height:58px;right:12px;font-size:19px}}
 #fbtn.go{background:var(--cool);color:var(--void)}
-#fbtn.off{background:transparent;border-color:var(--rule);color:var(--ink3);opacity:.55}
+#fbtn.off{background:transparent;border-color:var(--ink3);color:var(--ink3);opacity:.8}
 #fbtn:active{background:var(--cool);color:var(--void)}
 [hidden]{display:none!important}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}

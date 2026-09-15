@@ -133,5 +133,30 @@ hidden exactly when the player needed to learn it. Every one was the sim being
 right and the client saying nothing. The rule now reads: *disabled and visible
 beats correct and absent.*
 
+**Playtest 4 (2026-09-15) — controls invisible on iPhone 17 Pro**
+
+Report: no joysticks visible in either Safari or Chrome on iOS.
+
+Root cause: the HUD was `position:fixed; inset:0`, which sizes to the *layout*
+viewport. iOS overlays its bottom toolbar on top of that box, so the sticks —
+anchored 58px from the bottom — rendered underneath the tab bar. Both browsers
+failed identically because Chrome on iOS is WebKit. **Device emulation did not
+reproduce it**, because emulated viewports have no browser chrome; the bug was
+only findable by reasoning about the real device or testing on one.
+
+Fixed: HUD box is now driven by `visualViewport` (height and offsetTop) with
+resize/scroll/orientation listeners, so it tracks the area actually visible.
+Bottom offsets reduced to suit. Resting opacity raised 0.40 → 0.72 on the
+sticks and 0.55 → 0.80 on the floor button; grey-on-near-black at 40% read as
+"no controls" even where it was technically on screen. Stick captions moved
+above the rings, which were colliding with the stats row.
+
+Verified against a simulated 90px toolbar: sticks and button both clear, HUD
+height tracks the visible viewport.
+
+**Fourth playtest, fourth defect, same shape.** New standing rule: never anchor
+an interactive control to the bottom of a `position:fixed; inset:0` box on
+mobile — the browser puts its own chrome there.
+
 **Next:** play it again; then S02 (freeze the contract against this codec evidence),
 then survey mode, then a floor-device frame measurement.
