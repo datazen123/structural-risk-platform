@@ -199,3 +199,31 @@ than hand-assembled. Still not wired into CI — the drift risk from S03b stands
 
 Payload 14.8 KB gz. Determinism PASS. Axis mapping verified by unit test on the
 Input class with a stubbed touch surface.
+
+---
+
+## S00e — published publicly — 2026-09-15 — status: live
+
+Repository: https://github.com/datazen123/structural-risk-platform (public)
+67 files, 2 research programmes, 7 ADRs, a working prototype.
+
+**Redactions made before publishing.** Three things could not go public:
+1. `requirements/user-prompts.md` — the verbatim prompt log, which carries a
+   personal email address and a private remark about proceeding without
+   parental consent. Now gitignored; kept locally.
+2. That remark, quoted and attributed in `ADR-004`.
+3. Two research files referencing it as a stated position.
+
+In each case the *analysis* was preserved and the *attribution* removed — the
+argument that unlawfully obtained data is inadmissible under EASA DM-06 is worth
+publishing; a private remark that reads badly out of context is not. A redacted
+`requirements/requirements.md` keeps every requirement ID so ADR cross-references
+still resolve.
+
+**Left undecided on purpose:** no licence. Default copyright applies, so nobody
+can legally build on this yet. The README states it. This is an owner decision
+with commercial consequences and should not be made by default.
+
+**Drift risk, third mention:** `apps/game/` is the source, the published
+artifact is a bundle of it, and nothing enforces sync. `scripts/bundle-game.py`
+makes it reproducible but not automatic. S07 should own it.
