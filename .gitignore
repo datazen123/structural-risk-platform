@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example
+data/raw/
+data/interim/
+
+# private working log - raw source messages, not published
+requirements/user-prompts.md

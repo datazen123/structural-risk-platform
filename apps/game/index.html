@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0b0e13">
+<title>Rubble Run — Front Rose reach client</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<style>
+:root{
+  --void:#0b0e13; --panel:#151b23; --rule:#2b333f;
+  --ink:#e8ecf1; --ink2:#a3adba; --ink3:#6f7986;
+  --accent:#f28d55; --warn:#e05a3d; --good:#5fb397; --cool:#6fb3cf;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--void);color:var(--ink);
+  font:14px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;
+  -webkit-font-smoothing:antialiased;overscroll-behavior:none;
+  -webkit-tap-highlight-color:transparent}
+#stage{position:fixed;inset:0;touch-action:none}
+#cv{display:block;width:100%;height:100%}
+
+/* ---------- hud ---------- */
+#hud{position:fixed;inset:0;pointer-events:none;
+  padding:calc(env(safe-area-inset-top) + 10px) 12px 12px}
+.top{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}
+.pill{background:rgba(11,14,19,.82);border:1px solid var(--rule);border-radius:3px;
+  padding:5px 9px;font-size:11px;letter-spacing:.03em;display:flex;gap:7px;align-items:center}
+.pill b{color:var(--ink);font-weight:600}
+.pill span{color:var(--ink3)}
+.batwrap{width:88px;height:5px;background:var(--rule);border-radius:2px;overflow:hidden}
+#bat{height:100%;background:var(--accent);transition:width .12s linear}
+.bot{position:absolute;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 10px);
+  display:flex;justify-content:space-between;gap:8px;font-size:10.5px;color:var(--ink3)}
+
+/* objective: always says what to do next */
+#task{position:absolute;left:12px;right:12px;top:calc(env(safe-area-inset-top) + 46px);
+  background:rgba(11,14,19,.86);border:1px solid var(--rule);border-left:3px solid var(--good);
+  border-radius:3px;padding:7px 10px;max-width:340px;
+  display:flex;flex-direction:column;gap:1px}
+#task.warn{border-left-color:var(--warn)}
+#task.done{border-left-color:var(--cool)}
+#taskt{font-size:12.5px;color:var(--ink);font-weight:600}
+#tasks{font-size:11px;color:var(--ink2);line-height:1.35}
+
+/* floor column: where you are, where they are, all five floors at once */
+#floors{position:absolute;right:12px;top:calc(env(safe-area-inset-top) + 46px);
+  background:rgba(11,14,19,.86);border:1px solid var(--rule);border-radius:3px;
+  padding:6px;display:flex;flex-direction:column-reverse;gap:3px}
+.fl{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--ink3);
+  padding:2px 4px;border-radius:2px;min-width:64px}
+.fl.here{background:rgba(242,141,85,.16);color:var(--ink)}
+.fl .n{width:14px}
+.fl .m{flex:1;text-align:right;letter-spacing:1px}
+.fl .m.sv{color:var(--good)}
+.fl .m.ok{color:var(--cool)}
+
+/* ---------- overlays ---------- */
+.sheet{position:fixed;inset:0;background:rgba(11,14,19,.93);z-index:5;
+  display:flex;align-items:center;justify-content:center;padding:20px;
+  overflow-y:auto;-webkit-overflow-scrolling:touch}
+.card{width:100%;max-width:430px;background:var(--panel);border:1px solid var(--rule);
+  border-radius:4px;padding:20px}
+h1{font-size:21px;letter-spacing:-.01em;margin-bottom:3px;font-weight:600}
+.tag{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin-bottom:12px}
+p{color:var(--ink2);font-size:13px;margin-bottom:11px}
+p b{color:var(--ink);font-weight:600}
+.keys{border:1px solid var(--rule);border-radius:3px;padding:10px 11px;margin-bottom:13px;
+  font-size:12px;color:var(--ink2)}
+.keys div{display:flex;justify-content:space-between;gap:12px;padding:2.5px 0}
+.keys kbd{color:var(--ink);background:var(--void);border:1px solid var(--rule);
+  border-radius:2px;padding:0 5px;font:inherit;font-size:11px}
+button{font:inherit;font-size:13px;font-weight:600;letter-spacing:.03em;cursor:pointer;
+  background:var(--accent);color:var(--void);border:1px solid var(--accent);
+  border-radius:3px;padding:11px 16px;width:100%}
+button.ghost{background:transparent;color:var(--ink2);border-color:var(--rule);margin-top:8px}
+button:active{opacity:.85}
+dl{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--rule);
+  border:1px solid var(--rule);border-radius:3px;overflow:hidden;margin-bottom:13px}
+dl>div{background:var(--panel);padding:8px 10px}
+dt{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+dd{font-size:15px;color:var(--ink);margin-top:1px}
+details{margin-bottom:13px}
+summary{font-size:11px;color:var(--ink3);cursor:pointer;letter-spacing:.06em;
+  text-transform:uppercase;padding:4px 0}
+pre{background:var(--void);border:1px solid var(--rule);border-radius:3px;padding:10px;
+  font-size:10.5px;color:var(--ink2);overflow-x:auto;margin-top:6px;line-height:1.5}
+.legend{display:flex;flex-wrap:wrap;gap:5px 13px;font-size:11px;color:var(--ink3);margin-bottom:13px}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;
+  vertical-align:-1px;font-style:normal}
+/* Floating sticks. Drawn faint at a resting position so a first-time player
+   can see the controls exist, then they jump to wherever the thumb lands. */
+.stick{position:absolute;width:96px;height:96px;pointer-events:none;
+  bottom:calc(env(safe-area-inset-bottom) + 58px);
+  display:flex;align-items:center;justify-content:center;
+  opacity:.4;transition:opacity .12s ease}
+.stick.on{opacity:1;transition:none}
+#stickL{left:18px}
+#stickR{right:142px}
+.stick .ring{position:absolute;inset:0;border-radius:50%;
+  border:2px solid var(--ink3);background:rgba(11,14,19,.35)}
+.stick.on .ring{border-color:var(--accent)}
+.stick .knob{position:absolute;width:40px;height:40px;border-radius:50%;
+  background:rgba(163,173,186,.5);border:2px solid var(--ink2);
+  transform:translate(0,0)}
+.stick.on .knob{background:rgba(242,141,85,.55);border-color:var(--accent)}
+.stick .cap{position:absolute;bottom:-15px;font-size:9px;letter-spacing:.14em;
+  color:var(--ink3);font-weight:600}
+.stick.on .cap{color:var(--accent)}
+@media(hover:hover) and (pointer:fine){.stick{display:none}}
+@media(max-width:360px){
+  .stick{width:80px;height:80px}
+  .stick .knob{width:34px;height:34px}
+  #stickL{left:14px}
+  #stickR{right:110px}
+}
+
+/* one control for floors: tap it, the whole change happens */
+#fbtn{position:absolute;right:16px;bottom:calc(env(safe-area-inset-bottom) + 73px);
+  pointer-events:auto;width:66px;height:66px;border-radius:50%;padding:0;
+  background:rgba(111,179,207,.16);border:2px solid var(--cool);color:var(--cool);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  font-size:22px;line-height:1}
+#fbtn .l{font-size:8px;letter-spacing:.1em;font-weight:600}
+@media(hover:hover) and (pointer:fine){#fbtn{display:none}}
+@media(max-width:360px){#fbtn{width:58px;height:58px;right:12px;font-size:19px}}
+#fbtn.go{background:var(--cool);color:var(--void)}
+#fbtn.off{background:transparent;border-color:var(--rule);color:var(--ink3);opacity:.55}
+#fbtn:active{background:var(--cool);color:var(--void)}
+[hidden]{display:none!important}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="cv"></canvas></div>
+
+<div id="hud">
+  <div class="top">
+    <div class="pill"><span>PWR</span><div class="batwrap"><div id="bat"></div></div><b id="batn">95s</b></div>
+    <div class="pill"><span>FOUND</span><b id="found">0/3</b></div>
+    <div class="pill"><span>LVL</span><b id="depth">L1/5</b></div>
+    <div class="pill"><span>SPD</span><b id="spd">0.0</b></div>
+  </div>
+  <div id="task"><b id="taskt">Find the survivors</b><span id="tasks"></span></div>
+
+  <div id="floors" aria-hidden="true"></div>
+
+  <div class="stick" id="stickL"><div class="ring"></div><div class="knob"></div><span class="cap">TURN</span></div>
+  <div class="stick" id="stickR"><div class="ring"></div><div class="knob"></div><span class="cap">MOVE</span></div>
+
+  <button id="fbtn" hidden><span id="fbtnA">▲</span><span class="l" id="fbtnL">UP</span></button>
+
+  <div class="bot">
+    <span>contacts <b id="hits">0</b> · telemetry <b id="bytes">0.0KB</b></span>
+    <span><b id="seed">#000000</b> · <b id="fps">60fps</b></span>
+  </div>
+</div>
+
+<div class="sheet" id="intro">
+  <div class="card">
+    <div class="tag">Front Rose · reach client · tier 0</div>
+    <h1>Rubble Run</h1>
+    <p>You are flying a small drone through a collapsed building, looking for
+      survivors. The building is five floors deep and mostly caved in. You see
+      one floor at a time — <b>the floor you are on</b> — and you carry your own
+      light, so most of it is dark until you go there.</p>
+    <div class="legend">
+      <span><i style="background:#59657a"></i>rubble</span>
+      <span><i style="background:#31404f"></i>floor</span>
+      <span><i style="background:#12171f;border:1px solid #6fb3cf"></i>shaft down</span>
+      <span><i style="background:#3d5163"></i>opening up</span>
+      <span><i style="background:#5fb397"></i>survivor</span>
+      <span><i style="background:#6fb3cf"></i>way out</span>
+    </div>
+    <p><b>How to find someone.</b> A survivor within range shows as a green dot.
+      A <b>solid pulsing dot</b> is on your floor — fly onto it and it counts
+      automatically. A <b>dashed hollow ring</b> labelled <b>▲ 1 floor</b> or
+      <b>▼ 2 floors</b> is <i>not</i> on your floor, and flying over it will do
+      nothing at all until you change floors.</p>
+    <p><b>How to change floors — one key.</b> Tap <b>SPACE</b> (or the round blue
+      button on a phone). One tap moves you a whole floor; there is nothing to
+      hold. It only works where there is a hole, so when a survivor is on another
+      floor every cell you could pass through starts <b>pulsing blue</b> — fly onto
+      one and tap. The button only appears when the move is actually available,
+      and the column on the right shows all five floors, which one you are on, and
+      how many people are still waiting on each.</p>
+    <p><b>Then get out.</b> Once all three are found, fly back to the dashed
+      blue square you started at before the battery runs down.</p>
+    <div class="keys">
+      <div><span>Move</span><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span></div>
+      <div><span>Turn</span><span><kbd>Q</kbd><kbd>E</kbd></span></div>
+      <div><span>Change floor</span><span><kbd>Space</kbd> — one tap</span></div>
+      <div><span>On a phone — left stick</span><span>turn left / right</span></div>
+      <div><span>On a phone — right stick</span><span>up forward · down reverse · sideways strafe</span></div>
+      <div><span>Change floor on a phone</span><span>the blue button, right of the right stick</span></div>
+    </div>
+    <button id="begin">Start</button>
+  </div>
+</div>
+
+<div class="sheet" id="over" hidden>
+  <div class="card">
+    <div class="tag">Run complete</div>
+    <h1 id="otitle">Extracted</h1>
+    <p id="osub"></p>
+    <dl id="ostats"></dl>
+    <details>
+      <summary>What this run sent</summary>
+      <pre id="ojson"></pre>
+    </details>
+    <button id="again">New building</button>
+    <button class="ghost" id="retry">Same building again</button>
+  </div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
