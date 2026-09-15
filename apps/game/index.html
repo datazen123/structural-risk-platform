@@ -13,17 +13,22 @@
   --accent:#f28d55; --warn:#e05a3d; --good:#5fb397; --cool:#6fb3cf;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow:hidden;background:var(--void);color:var(--ink);
+html,body{height:100%;margin:0;overflow:hidden;background:var(--void);color:var(--ink);
   font:14px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;
   -webkit-font-smoothing:antialiased;overscroll-behavior:none;
   -webkit-tap-highlight-color:transparent}
-:root{--vvh:100%;--vvtop:0px}
-#stage{position:fixed;inset:0;touch-action:none}
+/* iOS Safari expands a cross-origin iframe to its content height and anchors
+   position:fixed to the document rather than the viewport, which puts
+   bottom-anchored controls far below the visible area. So nothing here is
+   fixed: #app is an absolutely positioned box whose pixel height JS sets from
+   the visual viewport, and every control is absolute inside it. */
+#app{position:absolute;left:0;top:0;width:100%;height:100%;overflow:hidden}
+#stage{position:absolute;inset:0;touch-action:none}
 #cv{display:block;width:100%;height:100%}
 
 /* ---------- hud ---------- */
-#hud{position:fixed;left:0;right:0;top:var(--vvtop);height:var(--vvh);
-  pointer-events:none;padding:calc(env(safe-area-inset-top) + 10px) 12px 12px}
+#hud{position:absolute;inset:0;pointer-events:none;
+  padding:calc(env(safe-area-inset-top) + 10px) 12px 12px}
 .top{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}
 .pill{background:rgba(11,14,19,.82);border:1px solid var(--rule);border-radius:3px;
   padding:5px 9px;font-size:11px;letter-spacing:.03em;display:flex;gap:7px;align-items:center}
@@ -57,7 +62,7 @@ html,body{height:100%;overflow:hidden;background:var(--void);color:var(--ink);
 .fl .m.ok{color:var(--cool)}
 
 /* ---------- overlays ---------- */
-.sheet{position:fixed;inset:0;background:rgba(11,14,19,.93);z-index:5;
+.sheet{position:absolute;inset:0;background:rgba(11,14,19,.93);z-index:5;
   display:flex;align-items:center;justify-content:center;padding:20px;
   overflow-y:auto;-webkit-overflow-scrolling:touch}
 .card{width:100%;max-width:430px;background:var(--panel);border:1px solid var(--rule);
@@ -133,6 +138,7 @@ pre{background:var(--void);border:1px solid var(--rule);border-radius:3px;paddin
 </style>
 </head>
 <body>
+<div id="app">
 <div id="stage"><canvas id="cv"></canvas></div>
 
 <div id="hud">
@@ -212,6 +218,8 @@ pre{background:var(--void);border:1px solid var(--rule);border-radius:3px;paddin
     <button id="again">New building</button>
     <button class="ghost" id="retry">Same building again</button>
   </div>
+</div>
+
 </div>
 
 <script type="module" src="./src/main.js"></script>

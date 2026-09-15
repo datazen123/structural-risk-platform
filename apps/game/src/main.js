@@ -16,15 +16,21 @@ const $ = (id) => document.getElementById(id);
 // visualViewport, which reports the area actually visible.
 (function fitViewport() {
   const vv = window.visualViewport;
-  const root = document.documentElement;
+  const app = document.getElementById('app');
   const sync = () => {
-    root.style.setProperty('--vvh', (vv ? vv.height : innerHeight) + 'px');
-    root.style.setProperty('--vvtop', (vv ? vv.offsetTop : 0) + 'px');
+    // Prefer the visual viewport; fall back to innerHeight. Never rely on % of
+    // an ancestor, because inside an iframe that ancestor may be the expanded
+    // document rather than the screen.
+    const h = Math.round(vv ? vv.height : innerHeight);
+    const w = Math.round(vv ? vv.width : innerWidth);
+    if (h > 0) { app.style.height = h + 'px'; app.style.width = w + 'px'; }
+    if (typeof onViewport === 'function') onViewport();
   };
   sync();
   if (vv) { vv.addEventListener('resize', sync); vv.addEventListener('scroll', sync); }
   addEventListener('resize', sync);
   addEventListener('orientationchange', () => setTimeout(sync, 250));
+  addEventListener('load', sync);
 })();
 const cv = /** @type {HTMLCanvasElement} */ ($('cv'));
 const view = new View(cv);
@@ -204,6 +210,14 @@ addEventListener('keydown', e => {
   if (e.key === 'r' && !running) start(L.seed);
   if (e.key === 'Enter' && !$('intro').hidden) { $('intro').hidden = true; start((Math.random() * 0xffffff) | 0); }
 });
+
+// Test hooks. The browser suite in test/dom.test.js drives these to verify the
+// controls actually move the drone, which is the one thing static inspection of
+// the DOM cannot establish.
+window.__input = input;
+window.__hud = hud;
+window.__sim = () => sim;
+window.__level = () => L;
 
 // Draw one frame behind the intro so the first thing anyone sees is the game.
 start((Math.random() * 0xffffff) | 0);

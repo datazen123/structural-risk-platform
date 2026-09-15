@@ -158,5 +158,38 @@ height tracks the visible viewport.
 an interactive control to the bottom of a `position:fixed; inset:0` box on
 mobile — the browser puts its own chrome there.
 
+**Playtest 5 (2026-09-15) — "still not working", and a real test suite**
+
+The previous two fixes were wrong, and both were shipped on inference rather
+than reproduction. Opacity was a real problem but not *the* problem;
+`visualViewport` sizing helped but left the actual cause in place.
+
+**Actual cause:** iOS Safari expands a cross-origin iframe to its content height
+and anchors `position:fixed` to the *document* rather than the viewport. Inside
+the artifact viewer, bottom-anchored controls therefore render far below the
+visible area. Chrome on iOS is WebKit, so it failed identically.
+
+Fix: **no `position:fixed` anywhere.** Everything lives inside `#app`, an
+absolutely positioned box whose pixel height JS sets from the visual viewport.
+
+Tests written and run:
+- `test/logic.test.mjs` — 15 tests, all passing. Level validity over 200 seeds,
+  determinism, idle drift, battery, pickup on/across floors, single-tap
+  traverse and its refusal, telemetry budget.
+- `test/dom.test.js` — 13 browser checks, all passing at 320x568, 402x874 and
+  landscape 874x402, run against a faithful reproduction of the artifact
+  environment (publish wrapper inside an iframe). Includes synthetic
+  `TouchEvent` drives proving each stick produces the right axes with no
+  cross-talk, both thumbs at once, and the knob tracking the thumb.
+- End-to-end: synthetic touch on the right stick moved the drone 1.33 cells
+  from spawn at speed 4.31. Not inferred — measured.
+- `scripts/test.sh` runs the logic suite, the payload budget, and a layout
+  invariant that fails the build if `position:fixed` returns.
+
+**Process lesson, now a rule:** a fix for a device-specific defect is not done
+until a test reproduces the failure, or the environment is faithfully rebuilt —
+publish wrapper and iframe included. Emulated viewports have no browser chrome
+and will not show this class of bug.
+
 **Next:** play it again; then S02 (freeze the contract against this codec evidence),
 then survey mode, then a floor-device frame measurement.
