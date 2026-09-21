@@ -33,6 +33,12 @@ SwiftShader software fallback, so context creation now fails outright rather
 than degrading (see `research/00-summary.md`, C-10). Any stack whose *only* path
 is WebGL fails the floor. Budgets: 200 KB gz initial, 30fps, ≤60 MB heap.
 
+> **Sequencing note, 2026-09-21.** The first attempt at this session stalled
+> after fetching the references, with D1+D2+D3+prototype in a single run. Split
+> it: D1 is its own run and publishes each artifact **as it works**, not in a
+> batch at the end. D2, D3 and `apps/game3d/` follow as separate runs. The
+> deliverable that matters is a reviewable artifact, not a complete report.
+
 ## Thread D1 — Reproduce the three references → `research/D1-references.md`
 
 Get each running, read the technique, and write down what it actually does.
