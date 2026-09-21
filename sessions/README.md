@@ -90,7 +90,8 @@ S00 bootstrap ✅
       ├─► S13 build in public (early; gated on ADR-004 for the player-facing half)
       ├─► S15 trade, insurance & survey evidence chain (after S12; can close routes)
       ├─► S16 STRUCTURAL RISK OBSERVATORY — the preventative half, and the priority
-      └─► S03 game core ✅ playable MVP at apps/game/ (see HANDOFF-S03.md)
+      ├─► S03 game core ✅ playable MVP at apps/game/ (see HANDOFF-S03.md)
+      └─► S17 3D client evaluation (reuses the S03 sim unchanged)
       └─► S10 evidence surface (last; consumes everything)
 ```
 
