@@ -118,6 +118,22 @@ disasters.
 Both must be playable game modes and both must be in the pitch. Designing for
 SAR alone is the obvious mistake to avoid; S03 and S04 own this.
 
+## What this actually is
+
+**A human-computation middleware and open telemetry specification for games with
+a purpose in disaster risk management.** (ADR-009, 2026-09-23.)
+
+The surface can be any game, built by any studio. What we supply is the layer
+beneath it: a telemetry contract, a validation pipeline, a metric set and a
+corpus. The field is *human computation* and specifically *Games With A
+Purpose* — Foldit and EteRNA are the precedents. The delivery form is
+middleware and an SDK, the way a studio integrates Havok for physics.
+
+**Rubble Run is the reference implementation, not the product.** It proves the
+contract works, shows an integrator how to adopt it, and seeds the corpus before
+a third party exists. It does not have to win a market; it has to prove a
+mechanism.
+
 ## Two deliverables, one system
 
 ### 1. The game (must be fun on its own merits)

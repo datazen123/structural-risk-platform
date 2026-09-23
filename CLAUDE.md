@@ -12,6 +12,12 @@ Continuous integration for the built environment. See S16.
 it into navigation capability for SAR robots. It is also how the preventative
 half's inspection queue gets serviced.
 
+**What it is, precisely:** a human-computation middleware and open telemetry
+specification for games with a purpose (ADR-009). The surface can be any game by
+any studio; we supply the layer beneath. Rubble Run is the **reference
+implementation**, not the product — which makes S02, freezing the telemetry
+contract, the highest-value unbuilt thing here.
+
 Deliverables:
 
 1. **A game that is actually fun**, playable on 2G/3G and low-end Android, that
