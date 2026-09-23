@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Canvas 2D perspective rubble-void probe</title>
+<!--
+  D1 EVIDENCE ONLY. Written for session S17 thread D1 to demonstrate that the
+  kirupa Canvas 2D perspective technique can project a rubble void with no GPU.
+
+  This is NOT the Tier-0 prototype and must not be mistaken for one:
+    * it generates its own voxel field and does NOT import apps/game/src/*
+    * there is no player input, no sim, no telemetry, no fog of war
+    * the camera flies a fixed path; it is not flown
+  Wiring the real Level/Sim into a renderer is the prototype's job, not D1's.
+
+  Technique, and the seven additions over kirupa's starfield:
+    1. a camera basis (position + yaw), 2. an explicit focal length,
+    3. near-plane clipping, 4. a bucket depth sort (painter's algorithm),
+    5. fillRect splats sized focal/z instead of ctx.arc points,
+    6. pre-baked depth-keyed palette, 7. surface-shell + slab culling.
+-->
+<style>
+html,body{margin:0;background:#05070a;height:100%}
+#voidcv{width:100%;height:100%;display:block}
+.hud{position:absolute;left:10px;top:10px;font:11px ui-monospace,monospace;
+  color:#ff9a4d;letter-spacing:.08em;text-shadow:0 0 6px #000}
+</style>
+<canvas id="voidcv"></canvas>
+<div class="hud"><span id="rPts">-</span> splats &middot; <span id="rMs">-</span> ms/frame
+ &middot; <span id="rFps">-</span> fps</div>
+<button id="pauseB" style="position:absolute;right:10px;top:10px">Pause</button>
+<script>
+(function(){
+var cv=document.getElementById('voidcv');
+var ctx=cv.getContext('2d',{alpha:false});
+var W=1,H=1,DPR=1;
+
+/* mulberry32 -- the PRNG apps/game/src/rng.js already uses, so this void is
+   deterministic from its seed the way a real level is. */
+function mulberry32(a){return function(){a=(a+0x6d2b79f5)>>>0;var t=a;
+  t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);
+  return((t^(t>>>14))>>>0)/4294967296;};}
+var r=mulberry32(0x5EED);
+function ri(lo,hi){return lo+Math.floor(r()*(hi-lo+1));}
+
+/* ---- 1. a volume: solid, then carved ---- */
+var VW=28,VL=150,VD=8;              /* x across, y along the run, z floors */
+var cells=new Uint8Array(VW*VL*VD); cells.fill(1);
+function idx(x,y,z){return (z*VL+y)*VW+x;}
+function inside(x,y,z){return x>=0&&y>=0&&z>=0&&x<VW&&y<VL&&z<VD;}
+function carve(x,y,z){if(inside(x,y,z))cells[idx(x,y,z)]=0;}
+function solid(x,y,z){return inside(x,y,z)?cells[idx(x,y,z)]:1;}
+
+var pathX=new Float32Array(VL), pathZ=new Float32Array(VL);
+var cx=VW/2, cz=2.2;
+for(var y=0;y<VL;y++){
+  cx+=(r()-0.5)*1.5; cx=Math.max(4.5,Math.min(VW-5.5,cx));
+  cz+=(r()-0.5)*0.26; cz=Math.max(1.8,Math.min(VD-3.0,cz));
+  pathX[y]=cx; pathZ[y]=cz;
+  var wid=2.7+r()*2.3, hgt=1.5+r()*1.15;
+  for(var x=Math.floor(cx-wid);x<=Math.ceil(cx+wid);x++)
+    for(var z=Math.floor(cz-hgt);z<=Math.ceil(cz+hgt);z++) carve(x,y,z);
+  if(r()<0.15){                                   /* a side chamber */
+    var sgn=r()<0.5?-1:1, rad=ri(3,6);
+    for(var dx=0;dx<=rad;dx++)for(var dy=-2;dy<=2;dy++)for(var dz=-1;dz<=1;dz++)
+      carve(Math.round(cx)+sgn*dx, y+dy, Math.round(cz)+dz);
+  }
+  if(r()<0.05){                                   /* a breach straight up */
+    for(var z2=0;z2<VD;z2++)for(var dx2=-1;dx2<=1;dx2++)for(var dy2=-1;dy2<=1;dy2++)
+      carve(Math.round(cx)+dx2, y+dy2, z2);
+  }
+}
+for(var i=0;i<900;i++) cells[idx(ri(1,VW-2),ri(1,VL-2),ri(0,VD-1))]=1;  /* debris */
+
+/* ---- 2. surface shell only: a solid voxel with at least one air neighbour.
+     Interior solids are invisible and must never reach the projection loop. */
+var NBIN=44, VIS=21.0;
+var bucketsByY=[];                  /* 3. cull: voxels indexed by their y */
+for(var y=0;y<VL;y++) bucketsByY.push([]);
+var shellN=0;
+var N6=[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+for(var z=0;z<VD;z++)for(var y=0;y<VL;y++)for(var x=0;x<VW;x++){
+  if(!cells[idx(x,y,z)]) continue;
+  var open=false;
+  for(var k=0;k<6;k++){var n=N6[k];
+    if(inside(x+n[0],y+n[1],z+n[2])&&!cells[idx(x+n[0],y+n[1],z+n[2])]){open=true;break;}}
+  if(!open) continue;
+  bucketsByY[y].push(x+0.5, z+0.5, (r()-0.5)*2.1);   /* x, z, depth jitter */
+  shellN++;
+}
+
+/* ---- 4. one pre-baked colour per depth bin. Never build an rgb() string in
+     the frame loop -- that allocates once per voxel per frame. ---- */
+var PAL=new Array(NBIN);
+for(var b2=0;b2<NBIN;b2++){
+  var t=1-b2/(NBIN-1);                       /* 1 = nearest */
+  var rr=Math.round(13+172*Math.pow(t,1.5));
+  var gg=Math.round(17+134*Math.pow(t,1.66));
+  var bb=Math.round(24+101*Math.pow(t,1.9));
+  PAL[b2]='rgb('+rr+','+gg+','+bb+')';
+}
+var bins=new Array(NBIN); for(var b3=0;b3<NBIN;b3++) bins[b3]=[];
+
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  var rect=cv.getBoundingClientRect();
+  W=Math.max(1,Math.round(rect.width)); H=Math.max(1,Math.round(rect.height));
+  cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR);
+}
+resize(); addEventListener('resize',resize);
+
+var camY=3, running=true, last=performance.now(), tsec=0;
+var msAcc=0, frames=0, lastReport=performance.now(), ptsLast=0;
+var eMs=document.getElementById('rMs'), ePts=document.getElementById('rPts'),
+    eFps=document.getElementById('rFps');
+
+function frame(now){
+  requestAnimationFrame(frame);
+  var dt=Math.min((now-last)/1000,0.1); last=now;
+  if(!running){ return; }
+  tsec+=dt; camY+=dt*4.2;
+  if(camY>VL-26){ camY=3; }
+
+  var t0=performance.now();
+  var yi=Math.floor(camY), fr=camY-yi;
+  var camX=pathX[yi]*(1-fr)+pathX[Math.min(VL-1,yi+1)]*fr;
+  var camZ=pathZ[yi]*(1-fr)+pathZ[Math.min(VL-1,yi+1)]*fr;
+  /* look ahead down the corridor, plus a slow sway, so the camera really does
+     yaw -- the thing kirupa's fixed origin cannot do */
+  var la=Math.min(VL-1,yi+9);
+  var yaw=Math.atan2(9, pathX[la]-camX) + Math.sin(tsec*0.55)*0.16;
+  var cs=Math.cos(yaw), sn=Math.sin(yaw);
+  var focal=0.95*H;                       /* explicit focal length, ~55 deg */
+  var hw=W*0.5, hh=H*0.5;
+
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.fillStyle='#05070a'; ctx.fillRect(0,0,W,H);
+
+  for(var b=0;b<NBIN;b++) bins[b].length=0;
+  var y0=Math.max(0,yi-6), y1=Math.min(VL-1,yi+Math.ceil(VIS)+2), drawn=0;
+
+  for(var yy=y0;yy<=y1;yy++){
+    var arr=bucketsByY[yy], wy=yy+0.5, dy=wy-camY;
+    for(var p=0;p<arr.length;p+=3){
+      var dx=arr[p]-camX, dz=arr[p+1]-camZ;
+      /* world -> view: forward along yaw, right perpendicular, up is z */
+      var f=dx*cs+dy*sn;
+      if(f<0.85||f>VIS) continue;                 /* near clip + far cull */
+      var rt=-dx*sn+dy*cs;
+      var inv=focal/f;
+      var sx=hw+rt*inv, sy=hh-dz*inv;
+      var s=inv*1.05;                             /* a cell is ~1 unit wide */
+      if(sx+s<0||sx-s>W||sy+s<0||sy-s>H) continue;
+      var bi=(((f+arr[p+2])*(NBIN-1)/VIS)|0);
+      if(bi<0)bi=0; else if(bi>=NBIN)bi=NBIN-1;
+      var bk=bins[bi]; bk.push(sx-s*0.5, sy-s*0.5, s);
+      drawn++;
+    }
+  }
+  /* 5. painter's algorithm, far bin first. Bucketing is O(n) and the bin
+     already keys the colour, so it is one fillStyle change per bin. */
+  for(var b4=NBIN-1;b4>=0;b4--){
+    var bk2=bins[b4]; if(!bk2.length) continue;
+    ctx.fillStyle=PAL[b4];
+    for(var q=0;q<bk2.length;q+=3) ctx.fillRect(bk2[q],bk2[q+1],bk2[q+2],bk2[q+2]);
+  }
+  msAcc+=performance.now()-t0; frames++; ptsLast=drawn;
+  if(now-lastReport>500){
+    eMs.textContent=(msAcc/frames).toFixed(2);
+    eFps.textContent=Math.round(frames*1000/(now-lastReport));
+    ePts.textContent=ptsLast.toLocaleString();
+    msAcc=0; frames=0; lastReport=now;
+  }
+}
+requestAnimationFrame(frame);
+
+var bB=document.getElementById('pauseB');
+if(matchMedia('(prefers-reduced-motion: reduce)').matches){running=false;bB.textContent='Play';}
+bB.addEventListener('click',function(){running=!running;bB.textContent=running?'Pause':'Play';
+  last=performance.now();lastReport=performance.now();msAcc=0;frames=0;});
+}());
+</script>
